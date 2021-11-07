@@ -103,18 +103,15 @@ class Opentron_Chacha:
             self.pipette.aspirate(volume, location)
             self.pipette.dispense(volume, location)
             self.pipette.blow_out(location)
-
-    def pipette_volume(self, antibody_type):
-        pipette_max_volume = self.pipette.max_volume
-        slide_number = self.chacha_labware['slide_number']
-        each_slide_volume = self.antibody_solution[antibody_type]['volume']
-
-        if slide_number*each_slide_volume <= pipette_max_volume:
-            return pipette_max_volume
-        else: pass
-
+        
+    def get_max_volume_need(self, antibody_type):
+        volume_need = self.get_volume(antibody_type)
+        number_slide = self.slides_num
+        max_volume = volume_need * number_slide
+        return max_volume
+    
     #blocking method
-    def blocking(self, antibody_type):
+    def blocking_1000(self, antibody_type):
         
         position = self.get_position(antibody_type)
         volume = self.get_volume(antibody_type)
@@ -122,41 +119,36 @@ class Opentron_Chacha:
 
         sol_labware = self.get_labware(antibody_type)
         
-        max_vol_aspirate = self.pipette.max_volume
+        max_vol_4_slides = self.get_max_volume_need(antibody_type)
+        max_vol_pipette = self.pipette.max_volume
+
         volume_to_do = 0
-        
 
-        while (volume > 0):
-
-            if (volume > max_vol_aspirate):
-                volume_to_do = max_vol_aspirate
-            else:
-                volume_to_do = volume
+        while(max_vol_4_slides > 0):
             
-            self.comment(f'BLOCK WITH {volume_to_do} uL {antibody_type} FROM {sol_labware} - {position}')
+            if max_vol_4_slides <= max_vol_pipette:
+                volume_to_do = max_vol_4_slides
+            else:
+                volume_to_do = max_vol_pipette
+
+            self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+            self.pipette.aspirate(volume_to_do, sol_labware[position])
+            self.volume_used(antibody_type, volume_to_do)
+
+            self.pipette.move_to(sol_labware[position].top(20), speed=50) # move slowly up
 
             for i in range(self.slides_num):
-                self.mix_up_n_down(max_vol_aspirate, sol_labware[position], 3)
-                self.pipette.aspirate(volume_to_do, sol_labware[position])
-                self.volume_used(antibody_type, volume_to_do)
-
-                self.pipette.move_to(sol_labware[position].top(20), speed=50) # move slowly up
-
                 for col in self.blocking_position[f'slide{i+1}']['cols']:
                     for row in self.blocking_position[f'slide{i+1}']['rows']:
-                        self.pipette.dispense(volume_to_do/4, location=self.chacha_labware[row+col].top(5))
+                        self.pipette.dispense(volume/4, location=self.chacha_labware[row+col].top(5))
 
-                #
-                last_row_pos = self.blocking_position[f'slide{i+1}']['rows'][-1]
-                last_col_pos = self.blocking_position[f'slide{i+1}']['cols'][-1]
-                last_drop_position = self.chacha_labware[last_row_pos+last_col_pos]
-                while (self.pipette.current_volume > 0):
-                    self.pipette.dispense(self.pipette.current_volume, location=last_drop_position.top(5))
-                self.pipette.blow_out(location=last_drop_position.top(5))
-                #
-            
-            volume -= volume_to_do
-            
+            last_row_pos = self.blocking_position[f'slide{i+1}']['rows'][-1]
+            last_col_pos = self.blocking_position[f'slide{i+1}']['cols'][-1]
+            last_drop_position = self.chacha_labware[last_row_pos+last_col_pos]
+            self.pipette.blow_out(location=last_drop_position.top(5))
+
+            max_vol_4_slides -= volume_to_do
+
         delay_min = time[0]
         delay_sec = time[1]
         
@@ -165,10 +157,12 @@ class Opentron_Chacha:
         self.protocol.delay(minutes=delay_min, seconds=delay_sec)
         
 
+
     ### NEW RINSING
     def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw):
         
         position = self.get_position(antibody_type)
+        volume = self.get_volume(antibody_type)
 
         sol_labware = self.get_labware(antibody_type)
         
@@ -179,42 +173,35 @@ class Opentron_Chacha:
             # Washing TBST 4 times (30 seconds * 4 = 2 mins)
             for j in range(n_each):
                 
-                volume = self.get_volume(antibody_type)
-
-                max_vol_aspirate = self.pipette.max_volume
+                max_vol_4_slides = self.get_max_volume_need(antibody_type)
+                max_vol_pipette = self.pipette.max_volume
 
                 volume_to_do = 0
 
-                while (volume > 0):
-
-                    if (volume > max_vol_aspirate):
-                        volume_to_do = max_vol_aspirate
+                while(max_vol_4_slides > 0):
+                    
+                    if max_vol_4_slides <= max_vol_pipette:
+                        volume_to_do = max_vol_4_slides
                     else:
-                        volume_to_do = volume
+                        volume_to_do = max_vol_pipette
+
+                    #self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    self.pipette.aspirate(volume_to_do, sol_labware[position])
+                    self.volume_used(antibody_type, volume_to_do)
+
+                    self.pipette.move_to(sol_labware[position].top(20), speed=50) # move slowly up
 
                     for i in range(self.slides_num):
-                        
-                        self.mix_up_n_down(max_vol_aspirate, sol_labware[position], 3)
-                        self.pipette.aspirate(volume_to_do, sol_labware[position])
-                        self.volume_used(antibody_type, volume_to_do)
-                        
-                        self.pipette.move_to(sol_labware[position].top(20), speed=50) # move slowly up
-
                         for col in self.blocking_position[f'slide{i+1}']['cols']:
                             for row in self.blocking_position[f'slide{i+1}']['rows']:
-                                self.pipette.dispense(volume_to_do/4, location=self.chacha_labware[row+col].top(5))
+                                self.pipette.dispense(volume/4, location=self.chacha_labware[row+col].top(5))
 
-                        #
-                        last_row_pos = self.blocking_position[f'slide{i+1}']['rows'][-1]
-                        last_col_pos = self.blocking_position[f'slide{i+1}']['cols'][-1]
-                        last_drop_position = self.chacha_labware[last_row_pos+last_col_pos]
-                        
-                        while (self.pipette.current_volume > 0):
-                            self.pipette.dispense(self.pipette.current_volume, location=last_drop_position.top(5))
-                        self.pipette.blow_out(location=last_drop_position.top(5))
-                        #
-                    
-                    volume -= volume_to_do
+                    last_row_pos = self.blocking_position[f'slide{i+1}']['rows'][-1]
+                    last_col_pos = self.blocking_position[f'slide{i+1}']['cols'][-1]
+                    last_drop_position = self.chacha_labware[last_row_pos+last_col_pos]
+                    self.pipette.blow_out(location=last_drop_position.top(5))
+
+                    max_vol_4_slides -= volume_to_do
 
                     
                 self.comment(f'DELAY {delay_min_in_btw} min, {delay_sec_in_btw} sec')
@@ -230,7 +217,7 @@ class Opentron_Chacha:
 
 #meta
 metadata = {
-    'protocolName': 'Opal 7 Colors Protocol Day 1',
+    'protocolName': 'Opal 7 Colors Protocol Day 1 - Using 1000uL',
     'author': 'thuanvo',
     'description': 'Day 1: Only CD8, FoxP3, and MHC-II',
     'apiLevel': '2.10'
@@ -329,7 +316,7 @@ def run(protocol: protocol_api.ProtocolContext):
     ###################################################################
 
     pipette.pick_up_tip()
-    tasks.blocking('opal_antibody_dilluent')
+    tasks.blocking_1000('opal_antibody_dilluent')
     tasks.washing(3)
     pipette.drop_tip()
 
@@ -338,47 +325,46 @@ def run(protocol: protocol_api.ProtocolContext):
     ###################################################################
 
     pipette.pick_up_tip()
-    tasks.blocking('cd8')
+    tasks.blocking_1000('cd8')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
     #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=2, delay_min_in_btw=1, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     ###################################################################
     ######## SECONDARY HRP ############################################
     ###################################################################
 
     pipette.pick_up_tip()
-    tasks.blocking('opal_polymer_HRP')
+    tasks.blocking_1000('opal_polymer_HRP')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()  
     #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=2, delay_min_in_btw=1, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     ###################################################################
     ######## OPAL 690 FLUOROPHORE #####################################
     ###################################################################
 
     pipette.pick_up_tip()
-    tasks.blocking('opal_690_fluorophore')
+    tasks.blocking_1000('opal_690_fluorophore')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
     #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=2, delay_min_in_btw=1, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
     
 
-    protocol.pause(f"PUT FoxP3 INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n", 
-                    f"AND PUT Opal 620  INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
+    tasks.comment(f"PUT FoxP3 INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n")
+    tasks.comment(f"AND PUT Opal 620  INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
+    protocol.pause()
 
     pipette.pick_up_tip()
-    tasks.blocking('foxp3')
+    tasks.blocking_1000('foxp3')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
 
     #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=2, delay_min_in_btw=1, delay_sec_in_btw=0)
-    # tasks.rinsing_with(antibody_type='h2o', n_time=2, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
     ######## END #####################################################
 
     tasks.volume_used_report()
