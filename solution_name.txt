@@ -1,0 +1,12 @@
+Opal Polymer HRP Ms+Rb secondary antibody: opal_polymer_HRP
+Opal 480 Fluorophore: opal_480_fluorophore
+Opal antibody diluent/block: opal_antibody_dilluent
+TCF-1: tcf_1
+Opal 520 Fluorophore: opal_520_fluorophore
+1X PBS + 0.1% Tween20: pbs_w_tween
+Opal 570 Fluorophore: opal_570_fluorophore
+CD4: cd4
+Opal TSA-DIG: opal_tsa_dig
+Opal Polaris 780: opal_polaris_780
+AR9 Buffer: ar9
+DAPI: dapi

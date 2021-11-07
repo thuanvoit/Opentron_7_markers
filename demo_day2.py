@@ -1,5 +1,7 @@
 from opentrons import protocol_api
 
+############ CLASS START ####################################################
+
 class Opentron_Chacha:
     
     def __init__(self, protocol, pipette, chacha_labware, slides_num, antibody_solution, blocking_position):
@@ -36,18 +38,16 @@ class Opentron_Chacha:
         for i in range(wash_n_time):
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
             self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
-            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =))
-            
+            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =)) 
 
             self.pipette.move_to(self.chacha_labware['L6'].top(20))
             self.pipette.move_to(self.chacha_labware['L6'].top(-2), speed=50)
-
 
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
             self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
             self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =))
 
-            self.protocol.delay(seconds=5)
+            self.protocol.delay(seconds=2) # save time
 
         self.pipette.move_to(self.chacha_labware['L6'].top(20))
         self.pipette.move_to(self.chacha_labware['L6'].top(-2), speed=50)
@@ -156,8 +156,6 @@ class Opentron_Chacha:
         self.pipette.home()
         self.protocol.delay(minutes=delay_min, seconds=delay_sec)
         
-
-
     ### NEW RINSING
     def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw):
         
@@ -185,7 +183,9 @@ class Opentron_Chacha:
                     else:
                         volume_to_do = max_vol_pipette
 
-                    #self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    if antibody_type is "tbst" or "h2o": pass
+                    else: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+
                     self.pipette.aspirate(volume_to_do, sol_labware[position])
                     self.volume_used(antibody_type, volume_to_do)
 
@@ -213,7 +213,8 @@ class Opentron_Chacha:
         
         # Remove OLD Tip
         self.pipette.drop_tip()
-        ######## REMOVE TBST #########################
+
+############ CLASS END ####################################################
 
 #meta
 metadata = {
