@@ -3,6 +3,8 @@ from opentrons import protocol_api
 ############ CLASS START ####################################################
 
 class Opentron_Chacha:
+
+    tip_count = 0
     
     def __init__(self, protocol, pipette, chacha_labware, slides_num, antibody_solution, blocking_position):
         self.protocol = protocol
@@ -47,7 +49,7 @@ class Opentron_Chacha:
             self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
             self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =))
 
-            self.protocol.delay(seconds=2) # save time
+            self.protocol.delay(seconds=5)
 
         self.pipette.move_to(self.chacha_labware['L6'].top(20))
         self.pipette.move_to(self.chacha_labware['L6'].top(-2), speed=50)
@@ -96,6 +98,7 @@ class Opentron_Chacha:
                 solution = self.antibody_solution[antibody]
                 volume_used = solution['used']
                 self.protocol.comment(f'Total Volume {antibody} used is {volume_used}uL ~ {str(volume_used/1000)}mL')
+        self.protocol.comment(f'Total Tip Used: {self.tip_count}')
 
     def mix_up_n_down(self, volume, location, n_time):
         self.comment('MIX UP & DOWN')
@@ -112,6 +115,8 @@ class Opentron_Chacha:
     
     #blocking method
     def blocking_1000(self, antibody_type):
+
+        self.tip_count += 1
         
         position = self.get_position(antibody_type)
         volume = self.get_volume(antibody_type)
@@ -157,7 +162,7 @@ class Opentron_Chacha:
         self.protocol.delay(minutes=delay_min, seconds=delay_sec)
         
     ### NEW RINSING
-    def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw):
+    def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw, mixing=False):
         
         position = self.get_position(antibody_type)
         volume = self.get_volume(antibody_type)
@@ -165,6 +170,7 @@ class Opentron_Chacha:
         sol_labware = self.get_labware(antibody_type)
         
         self.pipette.pick_up_tip()
+        self.tip_count += 1
         
         for n in range(n_time):
             self.comment(f'WASH WITH {antibody_type} {n+1} time')
@@ -183,7 +189,7 @@ class Opentron_Chacha:
                     else:
                         volume_to_do = max_vol_pipette
 
-                    if antibody_type is "tbst" or "h2o": pass
+                    if mixing==False: pass
                     else: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
 
                     self.pipette.aspirate(volume_to_do, sol_labware[position])
@@ -316,7 +322,7 @@ def run(protocol: protocol_api.ProtocolContext):
     ######## BLOCKING using Opal Antibody Dilluent ####################
     ###################################################################
     #TWEEN
-    tasks.rinsing_with(antibody_type='pbs_w_tween', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='pbs_w_tween', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0, mixing=True)
 
     pipette.pick_up_tip()
     tasks.blocking_1000('opal_570_fluorophore')
@@ -324,11 +330,14 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
 
     #TBST
-    tasks.rinsing_with(antibody_type='pbs_w_tween', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='pbs_w_tween', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0, mixing=True)
 
     #
-    tasks.comment('AR6 Buffer and Microwave Treatment')
     protocol.pause()
+    tasks.comment('AR6 Buffer and Microwave Treatment')
+    tasks.comment(f"PLEASE PUT CD4 INTO {antibody_solution['cd4']['labware']} - {antibody_solution['cd4']['position']}\n")
+    tasks.comment(f"AND PUT Opal TSA-DIG INTO {antibody_solution['opal_tsa_dig']['labware']} - {antibody_solution['opal_tsa_dig']['position']}\n")
+    
 
     ###################################################################
     ######## PRIMARY ANTIBODY INCUBATION ##############################
@@ -362,8 +371,10 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
     
     #
-    tasks.comment('AR6 Buffer and Microwave Treatment')
     protocol.pause()
+    tasks.comment('AR6 Buffer and Microwave Treatment')
+    tasks.comment(f"PLEASE PUT opal_polaris_780 INTO {antibody_solution['opal_polaris_780']['labware']} - {antibody_solution['opal_polaris_780']['position']}\n")
+    
 
     ###################################################################
     ######## SECONDARY HRP ############################################
@@ -373,7 +384,7 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.blocking_1000('opal_polaris_780')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
-     
+
     #TBST
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
     tasks.rinsing_with(antibody_type='ar9', n_time=1, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=5)

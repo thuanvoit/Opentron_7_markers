@@ -279,19 +279,19 @@ def run(protocol: protocol_api.ProtocolContext):
 
     antibody_solution = {
         # --- 1ST ROW ---
-        'opal_antibody_dilluent': {'labware': tuberack_15, 'position': 'A1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'cd8': {'labware': tuberack_15, 'position': 'A2', 'volume': 250, 'time': {"mins": 30, "sec": 0}, 'used':0},
-        'opal_polymer_HRP': {'labware': tuberack_15, 'position': 'A3', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'opal_690_fluorophore': {'labware': tuberack_15, 'position': 'A4', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'foxp3': {'labware': tuberack_15, 'position': 'A5', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
+        'opal_polymer_HRP': {'labware': tuberack_15, 'position': 'A1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'pbs_w_tween': {'labware': tuberack_15, 'position': 'A2', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
+        'opal_antibody_dilluent': {'labware': tuberack_15, 'position': 'A3', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'opal_570_fluorophore': {'labware': tuberack_15, 'position': 'A4', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'cd4': {'labware': tuberack_15, 'position': 'A5', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
 
         # --- 2ND ROW ---
         #'ar6_buffer': {'labware': tuberack_15, 'position': 'B1', 'volume': 400, 'time': {"mins": 0, "sec": 5}, 'used':0},
-        'opal_620_fluorophore': {'labware': tuberack_15, 'position': 'B1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'B2', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'B3', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'A4', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'B5', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'opal_tsa_dig': {'labware': tuberack_15, 'position': 'B1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'opal_polaris_780': {'labware': tuberack_15, 'position': 'B2', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
+        'ar9': {'labware': tuberack_15, 'position': 'B3', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
+        'dapi': {'labware': tuberack_15, 'position': 'A4', 'volume': 250, 'time': {"mins": 5, "sec": 0}, 'used':0},
+        'h2o': {'labware': tuberack_15, 'position': 'B5', 'volume': 250, 'time': {"mins": 2, "sec": 0}, 'used':0},
 
         # --- 3RD ROW ---
         'empty': {'labware': tuberack_15, 'position': 'C1', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
@@ -318,80 +318,21 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.comment('TASKS START AFTER 5 SECONDS')
     protocol.delay(minutes=0, seconds=5)
 
-    ###################################################################
-    ######## BLOCKING using Opal Antibody Dilluent ####################
-    ###################################################################
+############ TASKS START ###############################################
 
     pipette.pick_up_tip()
-    tasks.blocking_1000('opal_antibody_dilluent')
-    tasks.washing(3)
-    pipette.drop_tip()
-
-    ###################################################################
-    ######## PRIMARY ANTIBODY INCUBATION ##############################
-    ###################################################################
-
-    pipette.pick_up_tip()
-    tasks.blocking_1000('cd8')
+    tasks.blocking_1000('opal_polaris_780')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
+
     #TBST
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-
-    ###################################################################
-    ######## SECONDARY HRP ############################################
-    ###################################################################
+    tasks.rinsing_with(antibody_type='ar9', n_time=1, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=5)
 
     pipette.pick_up_tip()
-    tasks.blocking_1000('opal_polymer_HRP')
+    tasks.blocking_1000('dapi')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()  
-    #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
-    ###################################################################
-    ######## OPAL 690 FLUOROPHORE #####################################
-    ###################################################################
-
-    pipette.pick_up_tip()
-    tasks.blocking_1000('opal_690_fluorophore')
-    tasks.washing(wash_n_time=3)
-    pipette.drop_tip()
-    #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-    
-    #TIME ESTIMATED HERE
-    #refill
-    protocol.pause()
-    tasks.comment(f"PLEASE PUT FoxP3 INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n")
-    tasks.comment(f"AND PUT Opal 620  INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
-    
-
-    pipette.pick_up_tip()
-    tasks.blocking_1000('foxp3')
-    tasks.washing(wash_n_time=3)
-    pipette.drop_tip()
-
-    #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-
-    pipette.pick_up_tip()
-    tasks.blocking_1000('opal_polymer_HRP')
-    tasks.washing(wash_n_time=3)
-    pipette.drop_tip()
-
-    #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-
-    pipette.pick_up_tip()
-    tasks.blocking_1000('opal_620_fluorophore')
-    tasks.washing(wash_n_time=3)
-    pipette.drop_tip()
-
-    #TBST
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-
-
-    ######## END #####################################################
-
-    tasks.volume_used_report()
+    tasks.rinsing_with(antibody_type='tbst', n_time=1, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='h2o', n_time=1, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
