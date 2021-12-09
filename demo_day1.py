@@ -5,7 +5,12 @@ protocol_author = "thuanvo"
 protocol_description = "Day n: explanation"
 protocol_api_level = "2.10"
 
-chacha_def = {"location": 2,
+chacha_location = 2
+tiprack_location = 1
+tuberack_15_location = 7
+tbst_well_location = 3
+
+chacha_def = {"location": chacha_location,
                 "slide_number": 4, 
                 "blocking_position": {
                     'slide1': { 'cols': ['2', '3'],
@@ -79,7 +84,7 @@ class Opentron_Chacha:
                 self.protocol.delay(seconds=5)
                 self.comment(f"PLEASE CANCEL IF '{antibody}' IS NOT AT {sol_labware} '{position}' \nTASKS WILL RESUME IN 5 SECONDS")
                 count+=1
-        self.protocol.comment(f"{count} ANTIBODIES DETECTED SUCESFULLY")
+        self.protocol.comment(f"{count} ANTIBODIES CHECKED")
     
     def comment(self, msg):
         self.protocol.comment("--------------------------------------------------")
@@ -144,7 +149,7 @@ class Opentron_Chacha:
         current_volume_used += volume_used
         self.antibody_solution[antibody_type]['used'] = current_volume_used
     
-    def volume_used_report(self):
+    def material_report(self):
         self.comment(f'TOTAL VOLUME REPORT')
         for antibody in self.antibody_solution:
             if antibody != "empty":
@@ -154,7 +159,7 @@ class Opentron_Chacha:
         self.protocol.comment(f'Total Tip Used: {self.tip_count}')
 
     def mix_up_n_down(self, volume, location, n_time):
-        self.comment('MIX UP & DOWN')
+        self.comment('MIX THE SOLUTION')
         for n in range(n_time):
             self.pipette.aspirate(volume, location)
             self.pipette.dispense(volume, location)
@@ -168,7 +173,6 @@ class Opentron_Chacha:
     
     #blocking method
     def blocking_1000(self, antibody_type):
-
         self.tip_count += 1
         
         position = self.get_position(antibody_type)
@@ -216,7 +220,6 @@ class Opentron_Chacha:
         
     ### NEW RINSING
     def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw, mixing=False):
-        
         position = self.get_position(antibody_type)
         volume = self.get_volume(antibody_type)
 
@@ -262,15 +265,14 @@ class Opentron_Chacha:
 
                     max_vol_4_slides -= volume_to_do
 
-                    
                 self.comment(f'DELAY {delay_min_in_btw} min, {delay_sec_in_btw} sec')
                 self.pipette.home()
                 self.protocol.delay(minutes=delay_min_in_btw, seconds=delay_sec_in_btw)
                 self.washing(1)
-                
+
             self.washing()
         
-        # Remove OLD Tip
+        # Remove TBST Tip
         self.pipette.drop_tip()
 
 ############ CLASS END ####################################################
@@ -292,13 +294,13 @@ def run(protocol: protocol_api.ProtocolContext):
     chacha1_information = chacha_def
 
     # Introduce tiprack 1000uL and pipette 1000uL    
-    tiprack = protocol.load_labware('opentrons_96_tiprack_1000ul', location='1')
+    tiprack = protocol.load_labware('opentrons_96_tiprack_1000ul', location=tiprack_location)
     pipette = protocol.load_instrument('p1000_single', 'right', tip_racks=[tiprack])
 
     # Introduce Chacha labware & Tuberack & TBST Well (optional)
     chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1_information["location"])
-    tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location='7')
-    tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=3)
+    tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location=tuberack_15_location)
+    tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=tbst_well_location)
     
     # Gather all solution information
     antibody_solution = antibody_def(tuberack=tuberack_15, tbst_well=tbst_well)
@@ -397,4 +399,4 @@ def run(protocol: protocol_api.ProtocolContext):
 #######################################################################
 
     ######## REPORT VOLUME ############################################
-    tasks.volume_used_report()
+    tasks.material_report()
