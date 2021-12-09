@@ -1,5 +1,10 @@
 from opentrons import protocol_api
 
+protocol_name = 'Opal 7 markers'
+protocol_author = "thuanvo"
+protocol_description = "Day n: explanation"
+protocol_api_level = "2.10"
+
 chacha_def = {"location": 2,
                 "slide_number": 4, 
                 "blocking_position": {
@@ -71,10 +76,8 @@ class Opentron_Chacha:
                 sol_labware = self.get_labware(antibody)
                 position = self.get_position(antibody)
                 self.pipette.move_to(sol_labware[position].top(20))
-                
-                self.comment(f"PLEASE CANCEL IF '{antibody}' IS NOT AT {sol_labware} '{position}' \nTASKS WILL RESUME IN 5 SECONDS")
-                
                 self.protocol.delay(seconds=5)
+                self.comment(f"PLEASE CANCEL IF '{antibody}' IS NOT AT {sol_labware} '{position}' \nTASKS WILL RESUME IN 5 SECONDS")
                 count+=1
         self.protocol.comment(f"{count} ANTIBODIES DETECTED SUCESFULLY")
     
@@ -86,7 +89,7 @@ class Opentron_Chacha:
     #wash stuff
     ## NEED TO BE REDESIGN FOR DIFFERENT TIPS
     def washing(self, wash_n_time=1):
-        self.comment('DUMP EVERYTHING OUT =))')
+        self.comment('GET OFF LIQUIDS')
         for i in range(wash_n_time):
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
             self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
@@ -274,10 +277,10 @@ class Opentron_Chacha:
 
 # Protocol Information
 metadata = {
-    'protocolName': 'Opal 7 Colors Protocol Day 1 - Using 1000uL',
-    'author': 'thuanvo',
-    'description': 'Day 1: Only CD8, FoxP3, and MHC-II',
-    'apiLevel': '2.10'
+    'protocolName': protocol_name,
+    'author': protocol_author,
+    'description': protocol_description,
+    'apiLevel': protocol_api_level
 }
 
 def run(protocol: protocol_api.ProtocolContext):
@@ -293,7 +296,7 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette = protocol.load_instrument('p1000_single', 'right', tip_racks=[tiprack])
 
     # Introduce Chacha labware & Tuberack & TBST Well (optional)
-    chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1["location"])
+    chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1_information["location"])
     tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location='7')
     tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=3)
     
@@ -306,6 +309,7 @@ def run(protocol: protocol_api.ProtocolContext):
 
     tasks = Opentron_Chacha(protocol, pipette, chacha_labware, chacha1_information, antibody_solution)
 
+    # Check Anti_body
     tasks.check_antibodies()
 
     tasks.comment('TASKS START AFTER 5 SECONDS')
@@ -328,7 +332,8 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.blocking_1000('cd8')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
-    #TBST
+    
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     ###################################################################
@@ -339,7 +344,8 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.blocking_1000('opal_polymer_HRP')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()  
-    #TBST
+    
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     ###################################################################
@@ -350,22 +356,23 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.blocking_1000('opal_690_fluorophore')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
-    #TBST
+
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
-    
-    #TIME ESTIMATED HERE
-    #refill
+
+    ###################################################################
+    ######## PAUSE AND REFILL #########################################
+    ###################################################################
     protocol.pause()
     tasks.comment(f"PLEASE PUT FoxP3 INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n")
     tasks.comment(f"AND PUT Opal 620  INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
     
-
     pipette.pick_up_tip()
     tasks.blocking_1000('foxp3')
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
 
-    #TBST
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     pipette.pick_up_tip()
@@ -373,7 +380,7 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
 
-    #TBST
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
     pipette.pick_up_tip()
@@ -381,10 +388,13 @@ def run(protocol: protocol_api.ProtocolContext):
     tasks.washing(wash_n_time=3)
     pipette.drop_tip()
 
-    #TBST
+    ######## TBST #####################################################
     tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
 
 
-    ######## END #####################################################
+#######################################################################
+########## COMMANDS END ###############################################
+#######################################################################
 
+    ######## REPORT VOLUME ############################################
     tasks.volume_used_report()
