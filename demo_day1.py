@@ -1,10 +1,5 @@
 from opentrons import protocol_api
 
-protocol_name = 'Opal 7 markers'
-protocol_author = "thuanvo"
-protocol_description = "Day n: explanation"
-protocol_api_level = "2.10"
-
 chacha_location = 2
 tiprack_location = 1
 tuberack_15_location = 7
@@ -245,8 +240,8 @@ class Opentron_Chacha:
                     else:
                         volume_to_do = max_vol_pipette
 
-                    if mixing==False: pass
-                    else: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    if mixing: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    else: pass
 
                     self.pipette.aspirate(volume_to_do, sol_labware[position])
                     self.volume_used(antibody_type, volume_to_do)
@@ -279,10 +274,10 @@ class Opentron_Chacha:
 
 # Protocol Information
 metadata = {
-    'protocolName': protocol_name,
-    'author': protocol_author,
-    'description': protocol_description,
-    'apiLevel': protocol_api_level
+    'protocolName': "Opal 7 markers",
+    'author': "thuanvo",
+    'description': "Day n: explanation",
+    'apiLevel': "2.10"
 }
 
 def run(protocol: protocol_api.ProtocolContext):
