@@ -286,7 +286,6 @@ def run(protocol: protocol_api.ProtocolContext):
         'cd4': {'labware': tuberack_15, 'position': 'A5', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
 
         # --- 2ND ROW ---
-        #'ar6_buffer': {'labware': tuberack_15, 'position': 'B1', 'volume': 400, 'time': {"mins": 0, "sec": 5}, 'used':0},
         'opal_tsa_dig': {'labware': tuberack_15, 'position': 'B1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
         'opal_polaris_780': {'labware': tuberack_15, 'position': 'B2', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
         'ar9': {'labware': tuberack_15, 'position': 'B3', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},

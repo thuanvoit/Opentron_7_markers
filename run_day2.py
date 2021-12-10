@@ -1,18 +1,73 @@
 from opentrons import protocol_api
 
+chacha_location = 2
+tiprack_location = 1
+tuberack_15_location = 7
+tbst_well_location = 3
+
+chacha_def = {"location": chacha_location,
+                "slide_number": 4, 
+                "blocking_position": {
+                    'slide1': { 'cols': ['2', '3'],
+                                'rows': ['D', 'F'] },
+
+                    'slide2': { 'cols': ['9', '10'],
+                                'rows': ['F', 'H'] },
+
+                    'slide3': { 'cols': ['16', '17'],
+                                'rows': ['F', 'H'] },
+
+                    'slide4': { 'cols': ['23', '24'],
+                                'rows': ['F', 'H'] },
+                    }
+                }
+
+def antibody_def(tuberack, tbst_well=None):
+    tbst_well = {
+        'tbst': {'labware': tbst_well, 'position': 'A1', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
+    }
+
+    solution_in_tubrack = {
+        # --- 1ST ROW ---
+        'opal_polymer_HRP': {'labware': tuberack, 'position': 'A1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'opal_480_fluorophore': {'labware': tuberack, 'position': 'A2', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'opal_antibody_dilluent': {'labware': tuberack, 'position': 'A3', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        'tcf_1': {'labware': tuberack, 'position': 'A4', 'volume': 250, 'time': {"mins": 30, "sec": 0}, 'used':0},
+        'opal_520_fluorophore': {'labware': tuberack, 'position': 'A5', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+
+        # --- 2ND ROW ---
+        'empty': {'labware': tuberack, 'position': 'B1', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'B2', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'B3', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'A4', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'B5', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+
+        # --- 3RD ROW ---
+        'empty': {'labware': tuberack, 'position': 'C1', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'C2', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'C3', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'C4', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+        'empty': {'labware': tuberack, 'position': 'C5', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
+    }
+
+    # Add TBST Well to Solution List if using
+    if tbst_well != None: solution_in_tubrack.update(tbst_well)
+
+    return solution_in_tubrack
+
 ############ CLASS START ####################################################
 
 class Opentron_Chacha:
 
     tip_count = 0
     
-    def __init__(self, protocol, pipette, chacha_labware, slides_num, antibody_solution, blocking_position):
+    def __init__(self, protocol, pipette, chacha_labware, chacha_information, antibody_solution):
         self.protocol = protocol
         self.pipette = pipette
         self.chacha_labware = chacha_labware
         self.antibody_solution = antibody_solution
-        self.blocking_position = blocking_position
-        self.slides_num = slides_num
+        self.blocking_position = chacha_information['blocking_position']
+        self.slides_num = chacha_information['slide_number']
 
     def check_antibodies(self):
         count = 0
@@ -21,12 +76,10 @@ class Opentron_Chacha:
                 sol_labware = self.get_labware(antibody)
                 position = self.get_position(antibody)
                 self.pipette.move_to(sol_labware[position].top(20))
-                
-                self.comment(f"PLEASE CANCEL IF '{antibody}' IS NOT AT {sol_labware} '{position}' \nTASKS WILL RESUME IN 5 SECONDS")
-                
                 self.protocol.delay(seconds=5)
+                self.comment(f"PLEASE CANCEL IF '{antibody}' IS NOT AT {sol_labware} '{position}' \nTASKS WILL RESUME IN 5 SECONDS")
                 count+=1
-        self.protocol.comment(f"{count} ANTIBODIES DETECTED SUCESFULLY")
+        self.protocol.comment(f"{count} ANTIBODIES CHECKED")
     
     def comment(self, msg):
         self.protocol.comment("--------------------------------------------------")
@@ -36,7 +89,7 @@ class Opentron_Chacha:
     #wash stuff
     ## NEED TO BE REDESIGN FOR DIFFERENT TIPS
     def washing(self, wash_n_time=1):
-        self.comment('DUMP EVERYTHING OUT =))')
+        self.comment('GET OFF LIQUIDS')
         for i in range(wash_n_time):
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
             self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
@@ -91,7 +144,7 @@ class Opentron_Chacha:
         current_volume_used += volume_used
         self.antibody_solution[antibody_type]['used'] = current_volume_used
     
-    def volume_used_report(self):
+    def material_report(self):
         self.comment(f'TOTAL VOLUME REPORT')
         for antibody in self.antibody_solution:
             if antibody != "empty":
@@ -101,7 +154,7 @@ class Opentron_Chacha:
         self.protocol.comment(f'Total Tip Used: {self.tip_count}')
 
     def mix_up_n_down(self, volume, location, n_time):
-        self.comment('MIX UP & DOWN')
+        self.comment('MIX THE SOLUTION')
         for n in range(n_time):
             self.pipette.aspirate(volume, location)
             self.pipette.dispense(volume, location)
@@ -115,7 +168,6 @@ class Opentron_Chacha:
     
     #blocking method
     def blocking_1000(self, antibody_type):
-
         self.tip_count += 1
         
         position = self.get_position(antibody_type)
@@ -163,7 +215,6 @@ class Opentron_Chacha:
         
     ### NEW RINSING
     def rinsing_with(self, antibody_type, n_time, n_each, delay_min_in_btw, delay_sec_in_btw, mixing=False):
-        
         position = self.get_position(antibody_type)
         volume = self.get_volume(antibody_type)
 
@@ -189,8 +240,8 @@ class Opentron_Chacha:
                     else:
                         volume_to_do = max_vol_pipette
 
-                    if mixing==False: pass
-                    else: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    if mixing: self.mix_up_n_down(max_vol_pipette, sol_labware[position], 3)
+                    else: pass
 
                     self.pipette.aspirate(volume_to_do, sol_labware[position])
                     self.volume_used(antibody_type, volume_to_do)
@@ -209,113 +260,124 @@ class Opentron_Chacha:
 
                     max_vol_4_slides -= volume_to_do
 
-                    
                 self.comment(f'DELAY {delay_min_in_btw} min, {delay_sec_in_btw} sec')
                 self.pipette.home()
                 self.protocol.delay(minutes=delay_min_in_btw, seconds=delay_sec_in_btw)
                 self.washing(1)
-                
+
             self.washing()
         
-        # Remove OLD Tip
+        # Remove TBST Tip
         self.pipette.drop_tip()
 
 ############ CLASS END ####################################################
 
-#meta
+# Protocol Information
 metadata = {
-    'protocolName': 'Opal 7 Colors Protocol Day 1 - Using 1000uL',
-    'author': 'thuanvo',
-    'description': 'Day 1: Only CD8, FoxP3, and MHC-II',
-    'apiLevel': '2.10'
+    'protocolName': "Opal 7 markers",
+    'author': "thuanvo",
+    'description': "Day n: explanation",
+    'apiLevel': "2.10"
 }
-
 
 def run(protocol: protocol_api.ProtocolContext):
 
-    # TURN OFF RAILLIGHTS
-
+    # Turn off raillights
     protocol.set_rail_lights(False)
     
-    # INTRODUCE BLOCKING POSITION
+    # Introduce Slides Position on Chacha labware
+    chacha1_information = chacha_def
 
-    #chacha1
-    chacha1 = {"location": 2,
-                "slide_number": 4, 
-                "blocking_position": {
-                    'slide1': { 'cols': ['2', '3'], # KEEP CONSTANT
-                                'rows': ['D', 'F'], # OR
-                                },
-                    'slide2': { 'cols': ['9', '10'], # KEEP CONSTANT
-                                'rows': ['F', 'H'], # OR
-                                },
-                    'slide3': { 'cols': ['16', '17'], # KEEP CONSTANT
-                                'rows': ['F', 'H'], # OR
-                                },
-                    'slide4': { 'cols': ['23', '24'], # KEEP CONSTANT
-                                'rows': ['F', 'H'], # OR
-                                        #['B', 'C'],
-                                        #['F', 'G'],
-                                },
-                    }
-                }
-
-    # labwares
-    # tiprack = protocol.load_labware('opentrons_96_tiprack_300ul', location='1')
-    # pipette = protocol.load_instrument('p300_single', 'left', tip_racks=[tiprack])
-    
-    tiprack = protocol.load_labware('opentrons_96_tiprack_1000ul', location='1')
+    # Introduce tiprack 1000uL and pipette 1000uL    
+    tiprack = protocol.load_labware('opentrons_96_tiprack_1000ul', location=tiprack_location)
     pipette = protocol.load_instrument('p1000_single', 'right', tip_racks=[tiprack])
 
-    chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1["location"])
-    tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location='7')
-    # tuberack_15_50 = protocol.load_labware('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', location='8')
-    tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=3)
-
-    #tube introduce for opentrons_15_tuberack_falcon_15ml_conical
-    tbst_well = {
-        'tbst': {'labware': tbst_well, 'position': 'A1', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
-    }
-
-    antibody_solution = {
-        # --- 1ST ROW ---
-        'opal_polymer_HRP': {'labware': tuberack_15, 'position': 'A1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'pbs_w_tween': {'labware': tuberack_15, 'position': 'A2', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
-        'opal_antibody_dilluent': {'labware': tuberack_15, 'position': 'A3', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'opal_570_fluorophore': {'labware': tuberack_15, 'position': 'A4', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'cd4': {'labware': tuberack_15, 'position': 'A5', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
-
-        # --- 2ND ROW ---
-        #'ar6_buffer': {'labware': tuberack_15, 'position': 'B1', 'volume': 400, 'time': {"mins": 0, "sec": 5}, 'used':0},
-        'opal_tsa_dig': {'labware': tuberack_15, 'position': 'B1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
-        'opal_polaris_780': {'labware': tuberack_15, 'position': 'B2', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
-        'ar9': {'labware': tuberack_15, 'position': 'B3', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
-        'dapi': {'labware': tuberack_15, 'position': 'A4', 'volume': 250, 'time': {"mins": 5, "sec": 0}, 'used':0},
-        'h2o': {'labware': tuberack_15, 'position': 'B5', 'volume': 250, 'time': {"mins": 2, "sec": 0}, 'used':0},
-
-        # --- 3RD ROW ---
-        'empty': {'labware': tuberack_15, 'position': 'C1', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'C2', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'C3', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'C4', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-        'empty': {'labware': tuberack_15, 'position': 'C5', 'volume': 0, 'time': {"mins": 0, "sec": 0}, 'used':0},
-    }
-
-    # update TBST well into solutions list
-    antibody_solution.update(tbst_well)
+    # Introduce Chacha labware & Tuberack & TBST Well (optional)
+    chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1_information["location"])
+    tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location=tuberack_15_location)
+    tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=tbst_well_location)
     
-    # count slides 
-    # if slide * need <= pippete capacity: take slide * need
+    # Gather all solution information
+    antibody_solution = antibody_def(tuberack=tuberack_15, tbst_well=tbst_well)
 
-############ START ####################################################
+#######################################################################
+########## COMMANDS START #############################################
+#######################################################################
 
-    #command
+    tasks = Opentron_Chacha(protocol, pipette, chacha_labware, chacha1_information, antibody_solution)
 
-    tasks = Opentron_Chacha(protocol, pipette, chacha_labware, chacha1['slide_number'], antibody_solution, chacha1['blocking_position'])
-
+    # Check Anti_body
     tasks.check_antibodies()
 
     tasks.comment('TASKS START AFTER 5 SECONDS')
     protocol.delay(minutes=0, seconds=5)
 
-############ TASKS START ###############################################
+    ######## TBST #####################################################
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+
+    ###################################################################
+    ######## BLOCKING using Opal Antibody Dilluent ####################
+    ###################################################################
+    pipette.pick_up_tip()
+    tasks.blocking_1000('opal_480_fluorophore')
+    tasks.washing(3)
+    pipette.drop_tip()
+
+    ######## TBST #####################################################
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+
+    ###################################################################
+    ######## PAUSE AND MICROWAVE ######################################
+    ###################################################################
+    protocol.pause()
+    tasks.comment('AR6 Buffer and Microwave Treatment')
+    tasks.comment(f"PLEASE PUT Opal Antibody Diluent INTO {antibody_solution['opal_antibody_dilluent']['labware']} - {antibody_solution['opal_antibody_dilluent']['position']}\n")
+    tasks.comment(f"AND PUT TCF-1  INTO {antibody_solution['tcf_1']['labware']} - {antibody_solution['tcf_1']['position']}\n")
+    
+    ###################################################################
+    ######## PRIMARY ANTIBODY INCUBATION ##############################
+    ###################################################################
+    pipette.pick_up_tip()
+    tasks.blocking_1000('opal_antibody_dilluent')
+    tasks.washing(3)
+    pipette.drop_tip()
+
+    ###################################################################
+    ######## PRIMARY ANTIBODY INCUBATION ##############################
+    ###################################################################
+    pipette.pick_up_tip()
+    tasks.blocking_1000('tcf_1')
+    tasks.washing(wash_n_time=3)
+    pipette.drop_tip()
+
+    ######## TBST #####################################################
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+
+    ###################################################################
+    ######## SECONDARY HRP ############################################
+    ###################################################################
+    pipette.pick_up_tip()
+    tasks.blocking_1000('opal_polymer_HRP')
+    tasks.washing(wash_n_time=3)
+    pipette.drop_tip()
+
+    ######## TBST #####################################################
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+
+    ###################################################################
+    ######## OPAL 690 FLUOROPHORE #####################################
+    ###################################################################
+    pipette.pick_up_tip()
+    tasks.blocking_1000('opal_520_fluorophore')
+    tasks.washing(wash_n_time=3)
+    pipette.drop_tip()
+
+    ######## TBST #####################################################
+    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+
+#######################################################################
+########## COMMANDS END ###############################################
+#######################################################################
+
+    ######## REPORT VOLUME ############################################
+    tasks.material_report()
