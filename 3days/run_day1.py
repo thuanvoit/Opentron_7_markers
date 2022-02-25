@@ -23,6 +23,8 @@ chacha_def = {"location": chacha_location,
                 }
 
 def antibody_def(tuberack, tbst_well=None):
+
+    # ONLY VALID WITH TBST_WELL
     tbst_well = {
         'tbst': {'labware': tbst_well, 'position': 'A1', 'volume': 250, 'time': {"mins": 1, "sec": 0}, 'used':0},
     }
@@ -57,7 +59,7 @@ def antibody_def(tuberack, tbst_well=None):
 
 ############ CLASS START ####################################################
 
-class Opentron_Chacha:
+class Opentron_Chacha: #labware
 
     tip_count = 0
     
