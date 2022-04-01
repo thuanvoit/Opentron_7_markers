@@ -5,22 +5,24 @@ tiprack_location = 1
 tuberack_15_location = 7
 tbst_well_location = 3
 
+## POSITION START ##
 chacha_def = {"location": chacha_location,
                 "slide_number": 4, 
                 "blocking_position": {
                     'slide1': { 'cols': ['2', '3'],
-                                'rows': ['D', 'F'] },
+                                'rows': ['G', 'H'] },
 
-                    'slide2': { 'cols': ['9', '10'],
-                                'rows': ['F', 'H'] },
+                    'slide2': { 'cols': ['9', '11'],
+                                'rows': ['E', 'H'] },
 
-                    'slide3': { 'cols': ['16', '17'],
-                                'rows': ['F', 'H'] },
+                    'slide3': { 'cols': ['17', '18'],
+                                'rows': ['E', 'G'] },
 
                     'slide4': { 'cols': ['23', '24'],
                                 'rows': ['F', 'H'] },
                     }
                 }
+## POSITION END ##
 
 def antibody_def(tuberack, tbst_well=None):
 
@@ -31,10 +33,14 @@ def antibody_def(tuberack, tbst_well=None):
 
     solution_in_tubrack = {
         # --- 1ST ROW ---
+
+        # 1st run
         'opal_antibody_dilluent': {'labware': tuberack, 'position': 'A1', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
         'cd8': {'labware': tuberack, 'position': 'A2', 'volume': 250, 'time': {"mins": 30, "sec": 0}, 'used':0},
         'opal_polymer_HRP': {'labware': tuberack, 'position': 'A3', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
         'opal_690_fluorophore': {'labware': tuberack, 'position': 'A4', 'volume': 250, 'time': {"mins": 10, "sec": 0}, 'used':0},
+        
+        # 2nd run
         'foxp3': {'labware': tuberack, 'position': 'A5', 'volume': 250, 'time': {"mins": 60, "sec": 0}, 'used':0},
 
         # --- 2ND ROW ---
@@ -94,15 +100,13 @@ class Opentron_Chacha: #labware
         self.comment('GET OFF LIQUIDS')
         for i in range(wash_n_time):
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
-            self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
-            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =)) 
+            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=100) #speed to not throw slides =)) 
 
             self.pipette.move_to(self.chacha_labware['L6'].top(20))
-            self.pipette.move_to(self.chacha_labware['L6'].top(-2), speed=50)
+            self.pipette.move_to(self.chacha_labware['L6'].top(-1), speed=50)
 
             self.pipette.move_to(self.chacha_labware['A6'].top(20))
-            self.pipette.move_to(self.chacha_labware['A6'].top(-5), speed=100)
-            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=150) #speed to not throw slides =))
+            self.pipette.move_to(self.chacha_labware['A6'].top(-12), speed=100) #speed to not throw slides =))
 
             self.protocol.delay(seconds=5)
 
@@ -295,9 +299,9 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette = protocol.load_instrument('p1000_single', 'right', tip_racks=[tiprack])
 
     # Introduce Chacha labware & Tuberack & TBST Well (optional)
-    chacha_labware = protocol.load_labware('corning_384_wellplate_112ul_flat', location=chacha1_information["location"])
+    chacha_labware = protocol.load_labware('kissicklabdesign_384_wellplate_80ul', location=chacha1_information["location"])
     tuberack_15 = protocol.load_labware('opentrons_15_tuberack_falcon_15ml_conical', location=tuberack_15_location)
-    tbst_well = protocol.load_labware('agilent_1_reservoir_290ml', location=tbst_well_location)
+    tbst_well = protocol.load_labware('kissicklabdesign_1_reservoir_100000ul', location=tbst_well_location)
     
     # Gather all solution information
     antibody_solution = antibody_def(tuberack=tuberack_15, tbst_well=tbst_well)
@@ -333,7 +337,7 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
     
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
 
     ###################################################################
     ######## SECONDARY HRP ############################################
@@ -345,7 +349,7 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()  
     
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
 
     ###################################################################
     ######## OPAL 690 FLUOROPHORE #####################################
@@ -357,14 +361,25 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
 
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
 
     ###################################################################
     ######## PAUSE AND REFILL #########################################
     ###################################################################
     protocol.pause()
-    tasks.comment(f"PLEASE PUT FoxP3 INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n")
-    tasks.comment(f"AND PUT Opal 620  INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
+    tasks.comment(f"PLEASE REFILL [OPAL ANTIBODY DILLUENT] INTO {antibody_solution['opal_antibody_dilluent']['labware']} - {antibody_solution['opal_antibody_dilluent']['position']}\n")
+    tasks.comment(f"PLEASE REFILL [OPAL POLYMER HRP]       INTO {antibody_solution['opal_polymer_HRP']['labware']} - {antibody_solution['opal_polymer_HRP']['position']}\n")
+    tasks.comment(f"PLEASE PUT    [FoxP3]                  INTO {antibody_solution['foxp3']['labware']} - {antibody_solution['foxp3']['position']}\n")
+    tasks.comment(f"PLEASE PUT       [Opal 620]               INTO {antibody_solution['opal_620_fluorophore']['labware']} - {antibody_solution['opal_620_fluorophore']['position']}\n")
+    
+    ###################################################################
+    ######## BLOCKING using Opal Antibody Dilluent ####################
+    ###################################################################
+
+    pipette.pick_up_tip()
+    tasks.blocking_1000('opal_antibody_dilluent')
+    tasks.washing(3)
+    pipette.drop_tip()
     
     pipette.pick_up_tip()
     tasks.blocking_1000('foxp3')
@@ -372,7 +387,11 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
 
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
+    
+    ###################################################################
+    ######## Secondary opal_polymer_HRP ####################
+    ###################################################################
 
     pipette.pick_up_tip()
     tasks.blocking_1000('opal_polymer_HRP')
@@ -380,7 +399,7 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
 
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
 
     pipette.pick_up_tip()
     tasks.blocking_1000('opal_620_fluorophore')
@@ -388,7 +407,7 @@ def run(protocol: protocol_api.ProtocolContext):
     pipette.drop_tip()
 
     ######## TBST #####################################################
-    tasks.rinsing_with(antibody_type='tbst', n_time=5, n_each=1, delay_min_in_btw=2, delay_sec_in_btw=0)
+    tasks.rinsing_with(antibody_type='tbst', n_time=6, n_each=1, delay_min_in_btw=0, delay_sec_in_btw=30)
 
 
 #######################################################################
